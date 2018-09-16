@@ -1,4 +1,7 @@
-var CACHE_STATIC_NAME = 'static-v16';
+importScripts('/src/js/idb.js');
+importScripts('/src/js/utility.js');
+
+var CACHE_STATIC_NAME = 'static-v17';
 var CACHE_DYNAMIC_NAME = 'dynamic-v2';
 var STATIC_FILES = [
   '/',
@@ -6,6 +9,8 @@ var STATIC_FILES = [
   '/offline.html',
   '/src/js/app.js',
   '/src/js/feed.js',
+  '/src/js/idb.js',
+  '/src/js/utility.js',
   '/src/js/promise.js',
   '/src/js/fetch.js',
   '/src/js/material.min.js',
@@ -70,18 +75,26 @@ function isInArray(string, array) {
 
 // catch-first with Dynamic catching and chaching data request properly
 self.addEventListener('fetch', function (event) {
-  var url = 'https://httpbin.org/get';
+  var url = 'https://pwagram-2448f.firebaseio.com/posts.json';
   if (event.request.url.indexOf(url) > -1) {
-    event.respondWith(
-      caches.open(CACHE_DYNAMIC_NAME)
-        .then(function (cache) {
-          return fetch(event.request)
-            .then(function (res) {
-              // trimCache(CACHE_DYNAMIC_NAME, 3);
-              cache.put(event.request, res.clone());
-              return res;
-            });
-        })
+    event.respondWith(fetch(event.request)
+      .then(function (res) {
+        var clonedRes = res.clone();
+        clearAllData('posts')
+          .then(function () {
+            return clonedRes.json();
+          })
+          .then(function (data) {
+            for (var key in data) {
+              writeData('posts', data[key])
+                // Just to show deleting records data works
+                // .then(function() {
+                //   deleteItemFromData('posts', key);
+                // });
+            }
+          });
+        return res;
+      })   
     );
   } else if (isInArray(event.request.url, STATIC_FILES)) {
     event.respondWith(
